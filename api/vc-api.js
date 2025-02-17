@@ -3,14 +3,13 @@ const api = express();
 const logger = require("morgan");
 const bodyParser = require("body-parser");
 const {
-  getVcById,
-  verifyVc,
-  instantiateVc,
+  getVcById, issueVc,
 } = require("../repository/mongo-repository-vc");
 const {
   issueVcMicrosoft,
   verifyVCMicrosoft,
 } = require("../utils/Microsoft-functions");
+const {response} = require("express");
 
 const createApi = (callbackFun) => {
   api.use(bodyParser.json({ limit: "5mb" }));
@@ -33,50 +32,14 @@ const createApi = (callbackFun) => {
     res.status(200).send({ status: "OK" });
   });
 
-  api.get("/vc-issuer/api/v1/credentials/:id", (req, res) => {
-    const { id } = req.params;
-    getVcById(id)
-      .then((vc) => {
-        res.set("Content-Type", "application/json");
-        res.status(200).json(vc);
-      })
-      .catch((error) => {
-        res.status(400).send(error);
-      });
-  });
-
-  api.post("/vc-issuer/api/v1/verify", (req, res) => {
-    const vc = req.body;
-    verifyVc(vc)
-      .then((result) => {
-        res.set("Content-Type", "application/json");
-        res.status(200).json(result);
-      })
-      .catch((error) => {
-        res.status(400).send({ error });
-      });
-  });
-  // instantiating a VC
-  api.post("/vc-issuer/api/v1/credentials", (req, res) => {
-    const vc = req.body;
-    instantiateVc(vc)
-      .then((signedVc) => {
-        res.set("Content-Type", "application/json");
-        res.status(200).json(signedVc);
-      })
-      .catch((error) => {
-        res.status(400).send({ error });
-      });
-  });
-
-  //MICROSOFT VERIFIED ID ISSUE A CREDENTIAL + VERIFY A CREDENTIAL
   api.post("/vc-issuer/api/v1/issue-credential", (req, res) => {
-    const credentialPayload = req.body;
-    issueVcMicrosoft(credentialPayload)
-      .then((response) => response.json())
+    const PostData = req.body;
+    issueVc(PostData)
+      .then((response) =>
+          response.json())
       .then((data) => {
-        console.log("VC issued successfully");
         res.json(data);
+        console.log("VC issued successfully")
       })
       .catch((error) => {
         console.error("Error to issue VC:", error);
