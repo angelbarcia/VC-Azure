@@ -2,15 +2,7 @@ const express = require("express");
 const api = express();
 const logger = require("morgan");
 const bodyParser = require("body-parser");
-const {
-  getVcById, issueVc,
-} = require("../repository/mongo-repository-vc");
-const {
-  issueVcMicrosoft,
-  verifyVCMicrosoft,
-} = require("../utils/Microsoft-functions");
-const {response} = require("express");
-
+const { createIssuanceRequest } = require("../utils/Microsoft-functions");
 const createApi = (callbackFun) => {
   api.use(bodyParser.json({ limit: "5mb" }));
   api.use(logger("dev"));
@@ -33,13 +25,12 @@ const createApi = (callbackFun) => {
   });
 
   api.post("/vc-issuer/api/v1/issue-credential", (req, res) => {
-    const PostData = req.body;
-    issueVc(PostData)
-      .then((response) =>
-          response.json())
+    createIssuanceRequest()
+      .then((response) => response.json())
       .then((data) => {
         res.json(data);
-        console.log("VC issued successfully")
+        console.log(data);
+        console.log("VC issued successfully");
       })
       .catch((error) => {
         console.error("Error to issue VC:", error);
@@ -47,7 +38,7 @@ const createApi = (callbackFun) => {
       });
   });
 
-  api.post("/vc-issuer/api/v1/verify-credential", (req, res) => {
+  /*api.post("/vc-issuer/api/v1/verify-credential", (req, res) => {
     const jws = req.body;
     verifyVCMicrosoft(jws)
       .then((response) => response.json())
@@ -59,7 +50,7 @@ const createApi = (callbackFun) => {
         console.error("Verification failed:", error);
         res.status(500).send({ error: "Verification failed" });
       });
-  });
+  });*/
 
   const server = api.listen(process.env.API_PORT || 8100, callbackFun);
 }; // createApi
