@@ -2,7 +2,10 @@ const express = require("express");
 const api = express();
 const logger = require("morgan");
 const bodyParser = require("body-parser");
-const { createIssuanceRequest } = require("../utils/Microsoft-functions");
+const { createIssuanceRequest } = require("../utils/IssuanceRequest");
+const { getCredentialById } = require("../repository/mongo-repository-vc");
+const { verifyRequest } = require("../utils/VerificationRequest");
+const { getAllCredentials }  = require("../repository/mongo-repository-vc");
 const createApi = (callbackFun) => {
   api.use(bodyParser.json({ limit: "5mb" }));
   api.use(logger("dev"));
@@ -24,33 +27,46 @@ const createApi = (callbackFun) => {
     res.status(200).send({ status: "OK" });
   });
 
-  api.post("/vc-issuer/api/v1/issue-credential", (req, res) => {
-    createIssuanceRequest()
-      .then((response) => response.json())
-      .then((data) => {
-        res.json(data);
-        console.log(data);
-        console.log("VC issued successfully");
-      })
-      .catch((error) => {
-        console.error("Error to issue VC:", error);
-        res.status(500).send({ error: "Error to issue VC" });
-      });
+  api.get("vc-issuer/api/v1/credential/${id}", async (req, res) =>{
+    try {
+      const credential = await getCredentialById(req.params.id);
+      if (!credential) {
+        return res.status(404).json({ message: "Credential not found" });
+      }
+      res.status(200).json(credential);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
-  /*api.post("/vc-issuer/api/v1/verify-credential", (req, res) => {
-    const jws = req.body;
-    verifyVCMicrosoft(jws)
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("VC is legit");
-        res.json(data);
-      })
-      .catch((error) => {
-        console.error("Verification failed:", error);
-        res.status(500).send({ error: "Verification failed" });
-      });
-  });*/
+  api.get("vc-issuer/api/v1/credentials", async (req, res) => {
+    try {
+      const credentials = await getAllCredentials();
+      res.json(credentials);
+    } catch (error) {
+      res.status(500).json({message: error.message});
+    }
+  });
+
+  api.post("/vc-issuer/api/v1/issue-credential", async (req, res) => {
+    try {
+      const credentialData = req.body;
+      const issuedCredential = await createIssuanceRequest(credentialData)
+      res.status(201).json(issuedCredential);
+    } catch (error) {
+      res.status(500).json({message: error.message});
+    }
+  });
+
+  api.post("/vc-issuer/api/v1/verify-credential", async (req, res) => {
+    try {
+      const credentialData = req.body;
+      const verifiedCredential = await verifyRequest(credentialData)
+      res.status(200).json({ message: "Credential verified successfully", verifiedCredential });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   const server = api.listen(process.env.API_PORT || 8100, callbackFun);
 }; // createApi
